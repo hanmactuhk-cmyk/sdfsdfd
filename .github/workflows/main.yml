@@ -1,0 +1,133 @@
+name: Build G-Labs Studio
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  build-windows:
+    name: Build Windows EXE
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements
+
+      - name: Check Python source
+        shell: pwsh
+        run: |
+          python -m py_compile `
+            desktop\main.py `
+            desktop\api_client.py `
+            desktop\workflow.py
+
+      - name: Validate sample workflow
+        shell: pwsh
+        run: |
+          python -c "import json; from desktop.workflow import validate; p='data/workflows/sample.json'; d=json.load(open(p, encoding='utf-8')); e,w=validate(d); print('errors=',e); print('warnings=',w); raise SystemExit(1 if e else 0)"
+
+      - name: Build EXE
+        shell: pwsh
+        run: |
+          Remove-Item -Recurse -Force package -ErrorAction SilentlyContinue
+          Remove-Item -Recurse -Force build -ErrorAction SilentlyContinue
+
+          python -m PyInstaller `
+            --noconfirm `
+            --clean `
+            --onefile `
+            --windowed `
+            --name "G-Labs-Studio" `
+            --paths "desktop" `
+            --distpath "package" `
+            --workpath "build" `
+            "desktop\main.py"
+
+      - name: Verify EXE
+        shell: pwsh
+        run: |
+          $exe = "package\G-Labs-Studio.exe"
+
+          if (-not (Test-Path $exe)) {
+            Write-Error "EXE was not created: $exe"
+            exit 1
+          }
+
+          $size = (Get-Item $exe).Length
+
+          if ($size -lt 100000) {
+            Write-Error "EXE is unexpectedly small: $size bytes"
+            exit 1
+          }
+
+          Write-Host "EXE created successfully."
+          Write-Host "Path: $exe"
+          Write-Host "Size: $size bytes"
+
+      - name: Package resources
+        shell: pwsh
+        run: |
+          if (Test-Path "bridge") {
+            Copy-Item "bridge" "package\bridge" -Recurse -Force
+          }
+
+          if (Test-Path "data") {
+            Copy-Item "data" "package\data" -Recurse -Force
+          }
+
+          if (Test-Path "extension") {
+            Copy-Item "extension" "package\extension" -Recurse -Force
+          }
+
+          if (Test-Path "_locales") {
+            Copy-Item "_locales" "package\_locales" -Recurse -Force
+          }
+
+          if (Test-Path "README.md") {
+            Copy-Item "README.md" "package\README.md" -Force
+          }
+
+      - name: Create ZIP
+        shell: pwsh
+        run: |
+          if (Test-Path "G-Labs-Studio-Windows.zip") {
+            Remove-Item "G-Labs-Studio-Windows.zip" -Force
+          }
+
+          Compress-Archive `
+            -Path "package\*" `
+            -DestinationPath "G-Labs-Studio-Windows.zip" `
+            -CompressionLevel Optimal
+
+      - name: Upload Windows package
+        uses: actions/upload-artifact@v4
+        with:
+          name: G-Labs-Studio-Windows
+          path: package
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: G-Labs-Studio-Windows-ZIP
+          path: G-Labs-Studio-Windows.zip
+          if-no-files-found: error
+          retention-days: 14
