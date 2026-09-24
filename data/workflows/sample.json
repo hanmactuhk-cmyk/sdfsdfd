@@ -1,0 +1,12 @@
+{
+  "nodes": [
+    {"id": 1, "type": "prompt", "title": "Prompt", "x": 80, "y": 100, "inputs": [], "outputs": ["Prompt"], "values": {"prompt": "A cinematic landscape at sunrise"}},
+    {"id": 2, "type": "openai", "title": "OpenAI Image", "x": 380, "y": 100, "inputs": ["Prompt"], "outputs": ["Image"], "values": {"aspect_ratio": "landscape_16_9", "quality": "high", "prompt_mode": "auto", "reasoning": "none", "web_search": false}},
+    {"id": 3, "type": "grok", "title": "Grok", "x": 380, "y": 340, "inputs": ["Prompt"], "outputs": ["Output"], "values": {"mode": "t2v", "aspect_ratio": "16:9", "video_length": 6, "resolution": "720p"}}
+  ],
+  "edges": [
+    {"start_node": 0, "start_socket": 0, "end_node": 1, "end_socket": 0},
+    {"start_node": 0, "start_socket": 0, "end_node": 2, "end_socket": 0}
+  ],
+  "groups": []
+}

@@ -1,0 +1,1 @@
+{"manifest_version":3,"name":"G-Labs Studio Bridge","version":"1.0.0","description":"Local bridge for G-Labs Studio authorized automation.","permissions":["storage"],"action":{"default_title":"G-Labs Studio"}}
